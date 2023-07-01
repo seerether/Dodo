@@ -1,0 +1,19 @@
+function _poolRepayAll(address pool, address token) internal {
+    accrueInterest(token);
+
+    AssetInfo storage info = assetInfo[token];
+    BorrowRecord storage record = info.borrowRecord[pool];
+    uint256 amount = record.amount.div(record.interestIndex == 0 ? 1e18 : record.interestIndex).mul(info.borrowIndex);
+    
+    uint256 interests = amount;
+
+    require(amount <= info.totalBorrows, "Amount exceeds the total borrowed amount.");
+
+    record.amount = 0;
+    record.interestIndex = info.borrowIndex;
+    info.totalBorrows = info.totalBorrows - amount;
+    info.balance = info.balance - amount;
+    IERC20(token).safeTransferFrom(pool, address(this), amount);
+
+    emit PoolRepay(pool, token, amount, interests);
+}
