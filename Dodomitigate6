@@ -10,3 +10,4 @@ function userWithdraw(address to, address user, address token, uint256 dTokenAmo
     info.balance = info.balance - amount;
 
     emit UserWithdraw(msg.sender, user, token, amount);
+}
