@@ -1,0 +1,63 @@
+function setNewToken(
+    address token,
+    bool stableOrNot,
+    uint80 priceSet,
+    uint64 amountSet,
+    uint16 kAsk,
+    uint16 kBid,
+    uint8 tokenDecimal
+) external onlyOwner {
+    require(state.priceListInfo.tokenIndexMap[token] == 0, Errors.HAVE_SET_TOKEN_INFO);
+    // check amount
+    require(kAsk >= 0 && kAsk <= 10000, Errors.K_LIMIT);
+    require(kBid >= 0 && kBid <= 10000, Errors.K_LIMIT);
+
+    // Check capacity and adjust slot allocation if necessary
+    if (stableOrNot) {
+        require(state.priceListInfo.numberOfStable < MakerTypes.MAX_STABLE_TOKENS, Errors.MAX_STABLE_TOKENS_REACHED);
+    } else {
+        require(state.priceListInfo.numberOfNS < MakerTypes.MAX_NON_STABLE_TOKENS, Errors.MAX_NON_STABLE_TOKENS_REACHED);
+    }
+
+    // set new token info
+    state.tokenMMInfoMap[token].priceInfo = priceSet;
+    state.tokenMMInfoMap[token].amountInfo = amountSet;
+    state.tokenMMInfoMap[token].kAsk = kAsk;
+    state.tokenMMInfoMap[token].kBid = kBid;
+    state.tokenMMInfoMap[token].decimal = tokenDecimal;
+    state.heartBeat.lastHeartBeat = block.timestamp;
+
+    // set token price index
+    uint256 tokenIndex;
+    if (stableOrNot) {
+        // is stable
+        tokenIndex = state.priceListInfo.numberOfStable * 2;
+        uint256 innerSlotIndex = state.priceListInfo.numberOfStable % MakerTypes.PRICE_QUANTITY_IN_ONE_SLOT;
+        uint256 slotIndex = state.priceListInfo.numberOfStable / MakerTypes.PRICE_QUANTITY_IN_ONE_SLOT;
+        if (innerSlotIndex == 0) {
+            state.priceListInfo.tokenPriceStable.push(priceSet);
+        } else {
+            state.priceListInfo.tokenPriceStable[slotIndex] = (
+                uint256(priceSet) << (MakerTypes.ONE_PRICE_BIT * innerSlotIndex)
+            ) + state.priceListInfo.tokenPriceStable[slotIndex];
+        }
+        state.priceListInfo.numberOfStable++;
+    } else {
+        tokenIndex = state.priceListInfo.numberOfNS * 2 + 1;
+        uint256 innerSlotIndex = state.priceListInfo.numberOfNS % MakerTypes.PRICE_QUANTITY_IN_ONE_SLOT;
+        uint256 slotIndex = state.priceListInfo.numberOfNS / MakerTypes.PRICE_QUANTITY_IN_ONE_SLOT;
+        if (innerSlotIndex == 0) {
+            state.priceListInfo.tokenPriceNS.push(priceSet);
+        } else {
+            state.priceListInfo.tokenPriceNS[slotIndex] = (
+                uint 256(priceSet) << (MakerTypes.ONE_PRICE_BIT * innerSlotIndex)
+            ) + state.priceListInfo.tokenPriceNS[slotIndex];
+        }
+        state.priceListInfo.numberOfNS++;
+    }
+
+    // set token index map
+    state.priceListInfo.tokenIndexMap[token] = tokenIndex;
+
+    emit SetNewToken(token, stableOrNot, priceSet, amountSet, kAsk, kBid, tokenDecimal);
+}.
