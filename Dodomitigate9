@@ -1,0 +1,13 @@
+function mintTokens(address user, uint256 dTokenAmount) external {
+    try IDToken(info.dToken).mint(user, dTokenAmount) {
+        // Token transfer successful
+        // Perform any additional logic here
+    } catch Error(string memory errorString) {
+        // Handle the error string returned by the mint function
+        revert(errorString);
+    } catch {
+        // Handle any other exceptions that may occur
+        revert("An unknown error occurred");
+    }
+}
+
