@@ -1,0 +1,5 @@
+require(
+    IERC20(token).safeTransferFrom(msg.sender, address(this), amount),
+    "Transfer failed. Insufficient balance in the pool?"
+);
+    
