@@ -1,10 +1,12 @@
+/// @notice U = borrows / (cash + borrows - reserves)
 function getUtilizationRatio(address token) public view returns (uint256) {
     uint256 borrows = getTotalBorrows(token);
     uint256 cash = getCash(token);
     uint256 reserves = getReservesInVault(token);
 
-    // Handle the division by zero scenario
-    if (borrows == 0) return 0;
+    if (cash + borrows == 0) {
+        return 0;
+    }
 
     return borrows.div(cash + borrows - reserves);
 }
