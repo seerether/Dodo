@@ -1,0 +1,12 @@
+function userWithdraw(address to, address user, address token, uint256 dTokenAmount) external nonReentrant allowedToken(token) returns(uint256 amount) {
+    require(msg.sender == user, "Caller is not the dToken owner");
+    accrueInterest(token);
+    AssetInfo storage info = assetInfo[token];
+    require(dTokenAmount <= IDToken(info.dToken).balanceOf(user), Errors.DTOKEN_BALANCE_NOT_ENOUGH);
+
+    amount = dTokenAmount.mul(_getExchangeRate(token));
+    IDToken(info.dToken).burn(user, dTokenAmount);
+    IERC20(token).safeTransfer(to, amount);
+    info.balance = info.balance - amount;
+
+    emit UserWithdraw(msg.sender, user, token, amount);
