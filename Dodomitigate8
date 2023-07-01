@@ -1,5 +1,21 @@
-require(
-    IERC20(token).safeTransferFrom(msg.sender, address(this), amount),
-    "Transfer failed. Insufficient balance in the pool?"
-);
-    
+function poolRepay(address token, uint256 amount) external nonReentrant allowedToken(token) onlyPool {
+    accrueInterest(token);
+
+    AssetInfo storage info = assetInfo[token];
+    BorrowRecord storage record = info.borrowRecord[msg.sender];
+    uint256 borrows = record.amount.div(record.interestIndex == 0 ? 1e18 : record.interestIndex).mul(info.borrowIndex);
+    require(amount <= borrows, Errors.AMOUNT_EXCEED);
+
+    uint256 interests = borrows - record.amount;
+
+    record.amount = borrows - amount;
+    record.interestIndex = info.borrowIndex;
+    info.totalBorrows = info.totalBorrows - amount;
+    info.balance = info.balance + amount;
+
+    // Ensure the transfer is successful; otherwise, revert the transaction.
+    require(IERC20(token).safeTransferFrom(msg.sender, address(this), amount), "Transfer failed");
+
+    emit PoolRepay(msg.sender, token, amount, interests);
+}
+
