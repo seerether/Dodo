@@ -1,0 +1,11 @@
+function getPoolLeftQuota(address pool, address token) public view returns (uint256 leftQuota) {
+    uint256 quota = ID3PoolQuota(_POOL_QUOTA_).getPoolQuota(pool, token);
+    uint256 oldInterestIndex = assetInfo[token].borrowRecord[pool].interestIndex;
+    ( , ,uint256 currentInterestIndex, ) = _accrueInterestForRead(token);
+    if (oldInterestIndex == 0) oldInterestIndex = 1e18;
+    uint256 usedQuota = assetInfo[token].borrowRecord[pool].amount.div(oldInterestIndex).mul(currentInterestIndex);
+    leftQuota = quota > usedQuota ? quota - usedQuota : 0;
+
+    // Ensure that the remaining quota is non-negative
+    require(leftQuota >= 0, "Insufficient quota to borrow");
+}
